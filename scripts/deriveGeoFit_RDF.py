@@ -11,6 +11,10 @@ from CMS_style import setTDRStyle
 
 
 FILE_LOC = "/eos/cms/store/user/xzuo/H2XXNanoPost/2018/v0p0-5-g86fd7f9/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/DY/210921_001323/0000"
+#FILE_LOC = "/eos/cms/store/user/xzuo/H2XXNanoPost/2017/v0p0-8-g58bf5e1/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/DY_17_mg/211004_182536/0000"    #2017mg
+#FILE_LOC = "/eos/cms/store/user/xzuo/H2XXNanoPost/2017/v0p0-8-g58bf5e1/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/DY_17_amc/211004_182431/0000"  #2017amc
+#FILE_LOC = "/eos/cms/store/user/xzuo/H2XXNanoPost/2016/v0p0-9-g71fe22f/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/DY_16a_amc/211005_140301/0000/" #2016a amc
+#FILE_LOC = "/eos/cms/store/user/xzuo/H2XXNanoPost/2016/v0p0-9-g71fe22f/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/DY_16b_amc/211005_140427/0000/" #2016b amc  24files
 FILES = []
 for i in range(1,38):
   FILES.append('tree_%d.root'%i)
@@ -99,7 +103,7 @@ def DrawCanv(out_file, graph):
     cms_latex.DrawLatexNDC(0.8, 0.94,'#font[42]{#scale[1.5]{%sDY}}'%YEAR)
     
 
-    canv.SaveAs('outputs/geofit/'+graph_name+'.pdf')
+    canv.SaveAs( ('outputs/geofit/%s/'%YEAR) +graph_name+'.pdf')
 
 
 def PlotGeoFit(out_file, samp_files, tree_name):
@@ -111,12 +115,15 @@ def PlotGeoFit(out_file, samp_files, tree_name):
     graphs = {}
 
     df = ROOT.RDataFrame(tree_name, samp_files)
+    print (df.Count().GetValue())
     out_file.cd()
 
     df_mu = df.Define("mu_pass", "(Muon_corrected_pt>20) * (abs(Muon_eta)<2.4) * Muon_mediumId * (Muon_pfIsoId>1) * (abs(Muon_dxy)<0.05) * (abs(Muon_dz)<0.1) >0")
     df_dimu = df_mu.Filter("nMuon == 2 && Muon_charge[mu_pass==1][0]+Muon_charge[mu_pass==1][1]==0", "Select good dimuon events")
     df_z = df_dimu.Define("dimu_mass", "InvariantMass(Muon_corrected_pt, Muon_eta, Muon_phi, Muon_mass)").Filter("dimu_mass > 70", "on shell Z")
-    df_delPt = df_z.Define("delPt", " muon_charge * (Muon_corrected_pt - muon_pt_gen) / (muon_pt_gen * muon_pt_gen)") # All vecs need to have exact same size
+#    df_delPt = df.Filter("nMuon==2 && muon_pass[0]==1 && muon_pass[1]==1 && muon_charge[0]+muon_charge[1]==0", "good muons")\
+#                 .Define("delPt", " muon_charge * (Muon_corrected_pt[muon_pass==1] - muon_pt_gen) / (muon_pt_gen * muon_pt_gen)") # All vecs need to have exact same size
+    df_delPt = df_z.Define("delPt", " muon_charge * (Muon_corrected_pt[mu_pass==1] - muon_pt_gen) / (muon_pt_gen * muon_pt_gen)")
     report = df_delPt.Report()
     report.Print()
 
@@ -175,9 +182,9 @@ def main():
     samp_files = []
     for f in FILES:
         samp_files.append(FILE_LOC + '/' + f)
-    if not os.path.exists('outputs/geofit'):
-        os.makedirs('outputs/geofit')
-    out_file = ROOT.TFile("outputs/geofit/GeoFitParams.root", "RECREATE")
+    if not os.path.exists('outputs/geofit/%s'%YEAR):
+        os.makedirs('outputs/geofit/%s'%YEAR)
+    out_file = ROOT.TFile("outputs/geofit/%s/GeoFitParams.root"%YEAR, "RECREATE")
 
     start = timeit.default_timer()
     print (start)
